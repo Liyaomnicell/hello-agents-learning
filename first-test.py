@@ -1,5 +1,5 @@
 # Configure the LLM API in the .env file in the same-level folder. You can refer to the .env.example in the code folder, or reuse the .env file from previous chapter cases.
-from calculator_tool import CalculatorTool
+from tools.calculator_tool import CalculatorTool
 from dotenv import load_dotenv
 from my_llm import MyLLM
 from simple_agent import SimpleAgent
