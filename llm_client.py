@@ -1,7 +1,7 @@
 """An OpenAI-compatible streaming LLM client owned by this project."""
 
 import os
-from typing import Dict, List
+from typing import Dict, Iterator, List
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -30,26 +30,36 @@ class HelloAgentsLLM:
 
         self.client = OpenAI(api_key=apiKey, base_url=baseUrl, timeout=timeout)
 
+    def stream_invoke(
+        self, messages: List[Dict[str, str]], temperature: float = 0
+    ) -> Iterator[str]:
+        """Yield text chunks without printing, closing the API stream when done."""
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=temperature,
+            stream=True,
+        )
+        try:
+            for chunk in response:
+                if not chunk.choices:
+                    continue
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield content
+        finally:
+            response.close()
+
     def think(self, messages: List[Dict[str, str]], temperature: float = 0) -> str:
         """Send messages and return the full text while printing streamed tokens."""
         print(f"🧠 正在调用 {self.model} 模型...")
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                stream=True,
-            )
-
-            print("✅ 大语言模型响应成功:")
             collected_content = []
-            for chunk in response:
-                if not chunk.choices:
-                    continue
-                content = chunk.choices[0].delta.content or ""
+            for content in self.stream_invoke(messages, temperature=temperature):
                 print(content, end="", flush=True)
                 collected_content.append(content)
             print()
+            print("✅ 大语言模型响应成功")
             return "".join(collected_content)
 
         except Exception as error:
